@@ -37,7 +37,6 @@ class OpenAIServingChat(OpenAIServing):
         for the API specification. This API mimics the OpenAI ChatCompletion API.
 
         NOTE: Currently we do not support the following features:
-            - function_call (Users should implement this by themselves)
             - logit_bias (to be supported by vLLM engine)
         """
         error_check_ret = await self._check_model(request)
@@ -49,9 +48,35 @@ class OpenAIServingChat(OpenAIServing):
             return self.create_error_response(
                 "logit_bias is not currently supported")
 
+        conversation = []
+
+        # Support function call
+        if request.functions:
+            # request.functions should look like:
+            # [{'name': 'get_word_length', 'description': 'get_word_length(word: str) -> int - Returns the length of a word.',
+            # 'parameters': {'title': 'get_word_lengthSchemaSchema', 'type': 'object', 
+            # 'properties': {'word': {'title': 'Word', 'type': 'string'}}, 'required': ['word']}}]
+            function_instructions = """You may use the following FUNCTIONS in the response. Only use one function at a time.
+            Give output in following OUTPUT_FORMAT in strict JSON if you want to call a function.
+            FUNCTIONS:"""
+            for f in request.functions:
+                function_instructions += f"Name: {f['name']}\n"
+                function_instructions += f"Description: {f['description']}\n"
+
+            function_instructions += """OUTPUT_FORMAT:
+            {
+                "type": "FUNC_CALL",
+                "name": "<name of function>",
+                "parameters": "<parameters to pass to function>"
+            }"""
+
+            conversation = [{'role': 'user', 'content': function_instructions}, {
+                'role': 'assistant', 'content': 'Yes, sure.'}]
+        conversation += request.messages
+
         try:
             prompt = self.tokenizer.apply_chat_template(
-                conversation=request.messages,
+                conversation=conversation,
                 tokenize=False,
                 add_generation_prompt=request.add_generation_prompt)
         except Exception as e:
