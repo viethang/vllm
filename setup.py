@@ -20,7 +20,7 @@ ROOT_DIR = os.path.dirname(__file__)
 # The downside is that this method is deprecated, see
 # https://github.com/pypa/setuptools/issues/917
 
-MAIN_CUDA_VERSION = "12.1"
+MAIN_CUDA_VERSION = "12.0"
 
 # Supported NVIDIA GPU architectures.
 NVIDIA_SUPPORTED_ARCHS = {"7.0", "7.5", "8.0", "8.6", "8.9", "9.0"}
